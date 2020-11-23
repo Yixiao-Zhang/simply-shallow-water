@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
 
-from ode import OdeSolver
 from functools import partial
 from typing import AnyStr
+from contextlib import contextmanager
+import time
+
 import numpy as np
 import scipy.fftpack as fft
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
 
+from ode import OdeSolver
+
 dt = 0.02
+
+
+@contextmanager
+def Timer(tag=''):
+    start = time.time()
+    try:
+        yield
+    finally:
+        tot = time.time() - start
+        print(f'{tag:s} {tot:.02f}')
 
 class Grid:
     nx = 360
@@ -80,20 +94,24 @@ class Model(OdeSolver):
         return super().iter_states(self.ic)
 
 def main():
-    nstep = int(1.8e3)
+    nstep = int(1.8e4)
 
-    plt.plot(Model.ic, label='exact', linestyle='-')
+    plt.plot(Model.ic, label='exact', linestyle='-', linewidth=4.0)
 
     for scheme in ('fd', 'spec', 'fv'):
         model = Model(scheme)
 
-        for i, state in zip(range(nstep), model.iter_states()):
-            if i %100 == 0:
-                print(scheme, f'nstep {i:04d}')
+        with Timer(scheme):
+            for i, state in zip(range(nstep), model.iter_states()):
+                if i %100 == 0:
+                    print(scheme, f'nstep {i:04d}')
         plt.plot(state, label=scheme, marker='', linestyle='-', markersize=0.2)
 
     plt.legend()
-    plt.show()
+    plt.xlabel(r'Lontitude ($^\circ$)')
+    plt.ylabel('N')
+    plt.title(f'NSTEP = {nstep}')
+    plt.savefig(f'{nstep:d}steps.eps')
 
 if __name__ == '__main__':
     main()
